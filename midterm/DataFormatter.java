@@ -1,20 +1,30 @@
 import java.net.*;
 import java.io.*;
+import java.util.HashMap;
+import java.util.StringTokenizer;
 
 public class DataFormatter 
 {
+
 	//format data by creating data structure from all relevant dataset info and writing it to file for future reference
 	public static void main(String[] args) 
 	{
 		try 
 		{
-	        	File file = new File("allBandData.txt");
+			HashMap<Integer, Band> bandHash = new HashMap<>();
+	        	File file = new File("allBandData.csv");
 		        file.createNewFile();
 		        FileWriter writer = new FileWriter(file); 
+			File bandsFile  = new File("./datasets/bands.csv");
+			File albumsFile  = new File("./datasets/albums.csv");
+			File reviewsFile  = new File("./datasets/reviews.csv");
+
 			
-					
-			writer.write("Band ID, Band name, Formed in, Country, List of Album IDs, List of Album Names, List of Album Years, List of Album Reviews\n");
-			
+			getBands(bandsFile, bandHash);
+			getAlbums(albumsFile, bandHash);
+			getReviews(reviewsFile, bandHash);
+
+			writeData(writer, bandHash);
 
 		       	writer.close();
 		}
@@ -22,94 +32,84 @@ public class DataFormatter
 		{
 			e.printStackTrace();
 		} 
-		catch (FileNotFoundException e) 
-		{
-			e.printStackTrace();
-		} 
 
 	}
-/*	
-	public static void getConferenceInfo(String content, FileWriter writer) throws IOException
+	
+	public static void getBands(File bandsFile, HashMap<Integer, Band> bandHash) throws IOException
 	{
-	
-	
-		int startIndex = content.indexOf("Where");//skip a bunch of stuff to get to the top of the important bits
-		int endIndex = content.indexOf("Where");
-
-		for(int j=0;j<10;j++)//getting the acronym of the first entry (special case)
-		{
-			startIndex = content.indexOf(">", startIndex+1);//count > char until we get to text of first entry
-			endIndex = content.indexOf("<", endIndex+1);
-			if(content.substring(startIndex+1, startIndex+13).equals("Expired CFPs"))
-				j-=4;
-		}
-		//slide indices down string apprpriately and store substring	
-		startIndex++;
-		endIndex = content.indexOf("<", endIndex+1);
-		String confAcronym = content.substring(startIndex, endIndex);
+		FileReader fr = new FileReader(bandsFile);
+		BufferedReader br = new BufferedReader(fr);
 		
-		//do that over and over for sequential fields
-		for(int j=0;j<3;j++)
+		String line = br.readLine();
+		line = br.readLine();//twice to skip over header line
+		while(line != null)
 		{
-			startIndex = content.indexOf(">", startIndex+1);
-			endIndex = content.indexOf("<", endIndex+1);
-		}
-		startIndex++;
-		String confName = content.substring(startIndex, endIndex);
-				
-		for(int j=0;j<9;j++)
-		{
-			startIndex = content.indexOf(">", startIndex+1);
-			endIndex = content.indexOf("<", endIndex+1);
-		}
-		startIndex++;
-		String confLocation = content.substring(startIndex, endIndex);
-		
-		//append that stuff to file
-	       	writer.append(confAcronym + ",");
-		writer.append(confName + ",");
-		writer.append(confLocation + ",\n");
+			StringTokenizer st = new StringTokenizer(line, ",");
 
-		for(int k=0;k<19;k++)//do the same junk for the remaining 19 entries on page
-		{
-			for(int j=0;j<7;j++)
-			{
-				startIndex = content.indexOf(">", startIndex+1);//count > char until we get to text of next entry
-				endIndex = content.indexOf("<", endIndex+1);
-				if(content.substring(startIndex+1, startIndex+13).equals("Expired CFPs"))
-					j-=4;
-			}	
-			startIndex++;
-			confAcronym = content.substring(startIndex, endIndex).trim();
-					
-			for(int j=0;j<3;j++)
-			{
-				startIndex = content.indexOf(">", startIndex+1);
-				endIndex = content.indexOf("<", endIndex+1);
-				if(content.substring(endIndex+1, endIndex+4).trim().equals("img"))
-				{
-					j--;
-				}
-			}
-			startIndex++;
-			confName = content.substring(startIndex, endIndex).trim();
-				
-			for(int j=0;j<9;j++)
-			{
-				startIndex = content.indexOf(">", startIndex+1);
-				endIndex = content.indexOf("<", endIndex+1);
-			}
-			startIndex++;
-			confLocation = content.substring(startIndex, endIndex).trim();
-	
-		       	writer.append(confAcronym + ",");
-			writer.append(confName + ",");
-			writer.append(confLocation + ",\n");
+			int bandID = Integer.parseInt(st.nextToken());
+			String bandName = st.nextToken();
+			String country = st.nextToken();
+			st.nextToken();//skips the status field; I'd like to factor in this attribute in the model but it is not a crucial one - like a cherry on top
+			String formedString = st.nextToken();
+			int formedIn = -1;
+			if(!formedString.equals("N/A"))
+				formedIn = Integer.parseInt(formedString);
+			st.nextToken();//skips active field for same reason as status
+
+			Band b = new Band(bandID, bandName, formedIn, country);
+			bandHash.put(bandID, b);
+
+			line = br.readLine();
 		}
-		writer.flush();
+	}
+	public static void getAlbums(File albumsFile, HashMap<Integer, Band> bandHash) throws IOException
+	{
+		FileReader fr = new FileReader(albumsFile);
+		BufferedReader br = new BufferedReader(fr);
+		
+		String line = br.readLine();
+		line = br.readLine();//twice to skip over header line
+		while(line != null)
+		{
+			StringTokenizer st = new StringTokenizer(line, ",");
+
+			int albumID = Integer.parseInt(st.nextToken());
+			int bandID = Integer.parseInt(st.nextToken());
+			String albumTitle = st.nextToken();
+			int albumYear = Integer.parseInt(st.nextToken());
+
+			Album a = new Album(albumID, albumTitle, albumYear);
+			bandHash.get(bandID).addAlbum(albumID, a);
+
+			line = br.readLine();
+		}
+	}
+	public static void getReviews(File reviewsFile, HashMap<Integer, Band> bandHash) throws IOException
+	{
+		FileReader fr = new FileReader(reviewsFile);
+		BufferedReader br = new BufferedReader(fr);
+		
+		String line = br.readLine();
+		line = br.readLine();//twice to skip over header line
+		while(line != null)
+		{
+			StringTokenizer st = new StringTokenizer(line, ",");
+
+			int reviewID = Integer.parseInt(st.nextToken());
+			int albumID = Integer.parseInt(st.nextToken());
+			int reviewScore = Integer.parseInt(st.nextToken());
+
+			bandHash.get(bandID).addAlbum(albumID, a);
+
+			line = br.readLine();
+		}
 
 	}
-*/	
+	public static void writeData(FileWriter writer, HashMap<Integer, Band> bandHash) throws IOException
+	{
+		//writer.write("Band ID, Band name, Formed in, Country, List of Album IDs, List of Album Names, List of Album Years, List of Album Reviews\n");
+	}
+	
 }
 
 

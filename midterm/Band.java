@@ -6,11 +6,11 @@ public class Band
 	String name;
 	int formedIn;
 	String country;
-	HashMap<int, Album> albums = new HashMap<>();
+	HashMap<Integer, Album> albums = new HashMap<>();
 
 	public Band(int id, String name, int formedIn, String country)
 	{
-		this.ID = id,
+		this.ID = id;
 		this.name = name;
 		this.formedIn = formedIn;
 		this.country = country;
@@ -32,6 +32,10 @@ public class Band
 	{
 		return this.country;
 	}
+	public Album getAlbum(int albumID)
+	{
+		return this.albums.get(albumID);
+	}
 	public void printAlbums()
 	{
 		int i = 1;
@@ -46,11 +50,11 @@ public class Band
 			
 	public void addAlbum(int id, Album album)
 	{
-		albums.put(id, album);
+		this.albums.put(id, album);
 	}
 	public void addReview(int id, int score)
 	{
-		albums.get(id).addAlbumReview(score);
+		this.albums.get(id).addAlbumReview(score);
 	}
 
 }
