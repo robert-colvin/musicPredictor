@@ -2,6 +2,7 @@ import java.net.*;
 import java.io.*;
 import java.util.HashMap;
 import java.util.StringTokenizer;
+import java.util.Arrays;
 
 public class DataFormatter 
 {
@@ -21,8 +22,11 @@ public class DataFormatter
 
 			
 			getBands(bandsFile, bandHash);
-			getAlbums(albumsFile, bandHash);
-			getReviews(reviewsFile, bandHash);
+			//array with albumID as index and bandID as element at that index. Used for linking reviews later. skips index 0 since aID's start at 1
+			int[] albumIndexBandElement = getAlbums(albumsFile, bandHash);
+			getReviews(reviewsFile, bandHash, albumIndexBandElement);
+
+			printHashMap(bandHash);
 
 			writeData(writer, bandHash);
 
@@ -54,19 +58,22 @@ public class DataFormatter
 			int formedIn = -1;
 			if(!formedString.equals("N/A"))
 				formedIn = Integer.parseInt(formedString);
+			String genre = st.nextToken();
+			st.nextToken();//skips theme field
 			st.nextToken();//skips active field for same reason as status
 
-			Band b = new Band(bandID, bandName, formedIn, country);
+			Band b = new Band(bandID, bandName, genre, formedIn, country);
 			bandHash.put(bandID, b);
 
 			line = br.readLine();
 		}
 	}
-	public static void getAlbums(File albumsFile, HashMap<Integer, Band> bandHash) throws IOException
+	public static int[] getAlbums(File albumsFile, HashMap<Integer, Band> bandHash) throws IOException
 	{
 		FileReader fr = new FileReader(albumsFile);
 		BufferedReader br = new BufferedReader(fr);
 		
+		int[] aibe = new int[1];
 		String line = br.readLine();
 		line = br.readLine();//twice to skip over header line
 		while(line != null)
@@ -80,12 +87,17 @@ public class DataFormatter
 
 			Album a = new Album(albumID, albumTitle, albumYear);
 			bandHash.get(bandID).addAlbum(albumID, a);
+			aibe = Arrays.copyOf(aibe, aibe.length + 1);
+			aibe[albumID] = bandID;
 
 			line = br.readLine();
 		}
+
+		return aibe;
 	}
-	public static void getReviews(File reviewsFile, HashMap<Integer, Band> bandHash) throws IOException
+	public static void getReviews(File reviewsFile, HashMap<Integer, Band> bandHash, int[] aibe) throws IOException
 	{
+		System.out.println(aibe[aibe.length-1]);
 		FileReader fr = new FileReader(reviewsFile);
 		BufferedReader br = new BufferedReader(fr);
 		
@@ -97,9 +109,9 @@ public class DataFormatter
 
 			int reviewID = Integer.parseInt(st.nextToken());
 			int albumID = Integer.parseInt(st.nextToken());
-			int reviewScore = Integer.parseInt(st.nextToken());
+			double reviewScore = Double.parseDouble(st.nextToken());
 
-			bandHash.get(bandID).addAlbum(albumID, a);
+			bandHash.get(aibe[albumID]).addReview(albumID, reviewScore);
 
 			line = br.readLine();
 		}
@@ -107,7 +119,20 @@ public class DataFormatter
 	}
 	public static void writeData(FileWriter writer, HashMap<Integer, Band> bandHash) throws IOException
 	{
-		//writer.write("Band ID, Band name, Formed in, Country, List of Album IDs, List of Album Names, List of Album Years, List of Album Reviews\n");
+		writer.write("Band ID,Band name,Genre,Formed in,Country,List of Albums[ID|Name|Year|Avg Review]\n");
+		
+		for(Band b : bandHash.values())
+		{
+			writer.append(b.getBandID() + "," + b.getBandName() + "," + b.getGenre() + "," + b.getYearFormed() + "," + b.getCountry() + ",");
+			for(Album a : b.albums.values())
+				writer.append("[" + a.getAlbumID() + "|" + a.getAlbumTitle() + "|" + a.getAlbumYear() + "|" + a.getAvgReview() + "],");
+			writer.append("\n");
+		}
+	}
+	public static void printHashMap(HashMap<Integer, Band> bandHash)
+	{
+		for(Band b : bandHash.values())
+			b.printAlbums();
 	}
 	
 }
